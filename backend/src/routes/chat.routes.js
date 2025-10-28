@@ -8,6 +8,13 @@ const router = express.Router();
 /*POST/api/chat*/
 router.post('/', authMiddleware.authUser, chatController.createChat);
 
+/*GET/api/chat */
+router.get('/', authMiddleware.authUser, chatController.getChats);
+
+/*GET/api/chat/:chatId/messages */
+router.get('/messages/:id', authMiddleware.authUser, chatController.getMessages);
+
+
 
 
 
