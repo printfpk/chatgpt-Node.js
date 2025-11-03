@@ -10,12 +10,12 @@ const authRoutes = require('./routes/auth.routes');
 const chatRoutes = require('./routes/chat.routes');
 
 /*using middleware */
-app.use(cors({ origin: ['http://localhost:5173', 'https://chatgpt-node-js-43zk.onrender.com'], credentials: true }));
+app.use(cors({ origin: ['http://localhost:5173', ], credentials: true }));
 
 
 app.use(express.json());
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, '../public')));
 
 /*using routes */
 app.use('/api/auth', authRoutes);
