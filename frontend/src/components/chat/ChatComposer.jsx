@@ -25,6 +25,8 @@ const ChatComposer = ({ input, setInput, onSend, isSending }) => {
       <div className="composer-surface" data-state={isSending ? 'sending' : undefined}>
         <div className="composer-field">
           <textarea
+            id="chat-composer-input"
+            name="chat-composer-input"
             ref={textareaRef}
             className="composer-input"
             placeholder="Message ChatGPT…"
