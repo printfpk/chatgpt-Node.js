@@ -11,7 +11,7 @@ const chatRoutes = require('./routes/chat.routes');
 /*using middleware */
 app.use(cors(
     {
-        origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+        origin: [process.env.FRONTEND_URL, 'http://localhost:5173', 'https://chatgpt-node-js-2.onrender.com'],
         credentials: true
     }
 ));  
