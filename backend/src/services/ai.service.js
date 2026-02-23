@@ -5,7 +5,7 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 async function generateResponse(content) {
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-1.5-flash",
       contents: content,
       config: {
         temperature: 0.7,
@@ -31,7 +31,7 @@ async function generateResponse(content) {
       }
     });
 
-    return response.text();
+    return response.text;
   } catch (error) {
     console.error("Gemini API Error:", error);
     throw error;
