@@ -89,15 +89,18 @@ function initSocketServer(httpServer) {
             .sort({ createdAt: -1 })
             .limit(20)
             .lean()
-        ).reverse();
+        }).reverse();
         */
-
-        const stm = chatHistory.map((item) => {
-          return {
-            role: item.role,
-            parts: [{ text: item.content }],
-          };
-        });
+        
+        let stm = [];
+        if (chatHistory && chatHistory.length > 0) {
+          stm = chatHistory.map((item) => {
+            return {
+              role: item.role == 'model' ? 'model' : 'user',
+              parts: [{ text: item.content }],
+            };
+          });
+        }
 
         const ltm = [
           {
