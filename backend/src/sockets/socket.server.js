@@ -34,135 +34,119 @@ function initSocketServer(httpServer) {
 
   io.on("connection", (socket) => {
     socket.on("ai-message", async (messagePayload) => {
-      // const message = await messageModel.create({
-      //   user: socket.user._id,
-      //   chat: messagePayload.chat,
-      //   content: messagePayload.content,
-      //   role: "user",
-      // });
+      try {
+        const [message, vectors] = await Promise.all([
+          messageModel.create({
+            chat: messagePayload.chat,
+            user: socket.user._id,
+            content: messagePayload.content,
+            role: "user",
+          }),
+          aiService.generateVector(messagePayload.content),
+        ]);
 
-      // const vectors = await aiService.generateVector(messagePayload.content);
-
-      const [message, vectors] = await Promise.all([
-        messageModel.create({
-          chat: messagePayload.chat,
-          user: socket.user._id,
-          content: messagePayload.content,
-          role: "user",
-        }),
-        aiService.generateVector(messagePayload.content),
-      ]);
-
-      /* 
-      const memory = await queryMemory({
-        queryVector: vectors,
-        limit: 3,
-        metadata: {
-          user: socket.user._id,
-        }
-      });
-      */
-      await createMemory({
-        vectors,
-        messageId: message._id,
-        metadata: {
-          chat: messagePayload.chat,
-          user: socket.user._id,
-          text: messagePayload.content,
-        },
-      });
-
-      const [memory, chatHistory] = await Promise.all([
-        queryMemory({
+        /* 
+        const memory = await queryMemory({
           queryVector: vectors,
           limit: 3,
           metadata: {
             user: socket.user._id,
-          },
-        }),
-
-        messageModel
-          .find({
+          }
+        });
+        */
+        await createMemory({
+          vectors,
+          messageId: message._id,
+          metadata: {
             chat: messagePayload.chat,
-          })
-          .sort({ createdAt: -1 })
-          .limit(20)
-          .lean()
-          .then((messages) => messages.reverse()),
-      ]);
+            user: socket.user._id,
+            text: messagePayload.content,
+          },
+        });
 
-      /* const chatHistory = (
-        await messageModel
-          .find({ chat: messagePayload.chat })
-          .sort({ createdAt: -1 })
-          .limit(20)
-          .lean()
-      ).reverse();
-      */
+        const [memory, chatHistory] = await Promise.all([
+          queryMemory({
+            queryVector: vectors,
+            limit: 3,
+            metadata: {
+              user: socket.user._id,
+            },
+          }),
 
-      const stm = chatHistory.map((item) => {
-        return {
-          role: item.role,
-          parts: [{ text: item.content }],
-        };
-      });
+          messageModel
+            .find({
+              chat: messagePayload.chat,
+            })
+            .sort({ createdAt: -1 })
+            .limit(20)
+            .lean()
+            .then((messages) => messages.reverse()),
+        ]);
 
-      const ltm = [
-        {
-          role: "user",
-          parts: [
-            {
-              text: `
+        /* const chatHistory = (
+          await messageModel
+            .find({ chat: messagePayload.chat })
+            .sort({ createdAt: -1 })
+            .limit(20)
+            .lean()
+        ).reverse();
+        */
+
+        const stm = chatHistory.map((item) => {
+          return {
+            role: item.role,
+            parts: [{ text: item.content }],
+          };
+        });
+
+        const ltm = [
+          {
+            role: "user",
+            parts: [
+              {
+                text: `
                         these are some previous messages from the chat, use them to generate a response
                         ${memory.map((item) => item.metadata.text).join("\n")}
                         
                         `,
-            },
-          ],
-        },
-      ];
+              },
+            ],
+          },
+        ];
 
-      // console.log(ltm[0]);
-      // console.log(stm);
+        const response = await aiService.generateResponse([...ltm, ...stm]);
 
-      const response = await aiService.generateResponse([...ltm, ...stm]);
-
-      /*const responseMessage = await messageModel.create({
-        user: socket.user._id,
-        chat: messagePayload.chat,
-        content: response,
-        role: "model",
-      });
-      */
-
-      /*const responseVectors = await aiService.generateVector(response);
-       */
-
-      socket.emit("ai-response", {
-        content: response,
-        chat: messagePayload.chat,
-      });
-
-      const [responseMessage, responseVectors] = await Promise.all([
-        messageModel.create({
-          chat: messagePayload.chat,
-          user: socket.user._id,
+        socket.emit("ai-response", {
           content: response,
-          role: "model",
-        }),
-        aiService.generateVector(response),
-      ]);
-
-      await createMemory({
-        vectors: responseVectors,
-        messageId: responseMessage._id,
-        metadata: {
           chat: messagePayload.chat,
-          user: socket.user._id,
-          text: response,
-        },
-      });
+        });
+
+        const [responseMessage, responseVectors] = await Promise.all([
+          messageModel.create({
+            chat: messagePayload.chat,
+            user: socket.user._id,
+            content: response,
+            role: "model",
+          }),
+          aiService.generateVector(response),
+        ]);
+
+        await createMemory({
+          vectors: responseVectors,
+          messageId: responseMessage._id,
+          metadata: {
+            chat: messagePayload.chat,
+            user: socket.user._id,
+            text: response,
+          },
+        });
+
+      } catch (error) {
+        console.error("Socket error details:", error);
+        socket.emit("error", { message: "Something went wrong processing your message." });
+      }
     });
   });
 }
+
 module.exports = initSocketServer;
